@@ -582,7 +582,9 @@ final class _Muncher with LoggerMixin {
   }
 
   List<InlineSpan>? _buildBlockCode(uh.Element element) {
-    final text = element.querySelector('div')?.innerText.trim() ?? '';
+    // Usually each line in the block code is ended with `<br>` tag, but rarely it does not.
+    // To ensure each line is wrapped correctly, extract each line (contents in each `<div>`) and manually place them.
+    final text = element.querySelectorAll('div ol li').map((e) => e.innerText.trim()).join('\n');
     state
       ..headingBrNodePassed = true
       ..elevation += _elevationStep;
@@ -767,10 +769,17 @@ final class _Muncher with LoggerMixin {
     if (url.isUserSpaceUrl && !element.innerText.contains('@')) {
       content = Text('@', style: TextStyle(color: Theme.of(context).colorScheme.primary));
     } else {
+      final IconData prefixIcon;
+      if (url.startsWith('mailto:')) {
+        prefixIcon = Icons.email_outlined;
+      } else {
+        prefixIcon = Icons.link;
+      }
+
       content = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.link, size: state.fontSizeStack.lastOrNull ?? 18, color: Theme.of(context).colorScheme.primary),
+          Icon(prefixIcon, size: state.fontSizeStack.lastOrNull ?? 18, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 2),
         ],
       );
@@ -892,7 +901,7 @@ final class _Muncher with LoggerMixin {
       }(), // Unreachable but handle it.
     };
 
-    return [TextSpan(text: leading), ...ret, emptySpan];
+    return [TextSpan(text: leading), ...ret];
   }
 
   /// <code>xxx</code> tags. Mainly for github.com

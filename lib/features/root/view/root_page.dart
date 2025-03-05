@@ -60,23 +60,21 @@ class _RootPageState extends State<RootPage> with LoggerMixin {
             }
           },
         ),
-        BlocListener<AutoNotificationCubit, AutoNoticeState>(
-          listenWhen: (prev, curr) => curr is AutoNoticeStatePending && prev != curr,
-          listener: (context, state) {
-            // Add this check to make dart-analyzer happy.
-            if (state is! AutoNoticeStatePending) {
-              return;
-            }
-            debug('auto fetch got notice');
-          },
-        ),
         BlocListener<NotificationBloc, NotificationState>(
-          listenWhen: (_, curr) => curr.status == NotificationStatus.loading,
-          listener: (context, _) {
-            final autoSyncState = context.read<AutoNotificationCubit>();
-            if (autoSyncState.state is AutoNoticeStateTicking) {
-              // Restart the auto notification sync process.
-              context.read<AutoNotificationCubit>().restart();
+          listener: (context, state) {
+            if (state.status == NotificationStatus.loading) {
+              final autoSyncState = context.read<AutoNotificationCubit>();
+              if (autoSyncState.state is AutoNoticeStateTicking) {
+                // Restart the auto notification sync process.
+                context.read<AutoNotificationCubit>().restart();
+              }
+            } else if (state.status == NotificationStatus.success) {
+              // Update last fetch notification time.
+              // We do it here because it's a global action lives in the entire lifetime of the app, not only when
+              // the notification page is live. This fixes the critical issue where time not updated.
+              if (state.latestTime != null) {
+                context.read<NotificationBloc>().add(NotificationRecordFetchTimeRequested(state.latestTime!));
+              }
             }
           },
         ),
